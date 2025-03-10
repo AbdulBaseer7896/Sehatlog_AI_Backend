@@ -147,6 +147,7 @@ from langchain.chains import create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate
 from dotenv import load_dotenv
+from pinecone import Pinecone
 from utilits.prompt import system_prompt
 from utilits.Groq import GroqLLM
 
@@ -156,18 +157,20 @@ app.debug = True
 app.secret_key = "your_secret_key"
 
 load_dotenv()
-PINECONE_API_KEY = os.environ.get('PINECONE_API_KEY')
+# PINECONE_API_KEY = os.environ.get('PINECONE_API_KEY')
+pc = Pinecone(api_key=os.environ["PINECONE_API_KEY"])
 groq_client_value = os.environ.get('GROQ_API_KEY')
 
-os.environ["PINECONE_API_KEY"] = PINECONE_API_KEY
+# os.environ["PINECONE_API_KEY"] = PINECONE_API_KEY
 os.environ["groq_client"] = groq_client_value
 
 embeddings = download_hugging_face_embeddings()
-
 index_name = "medicalbot"
-docsearch = PineconeVectorStore.from_existing_index(
-    index_name=index_name,
-    embedding=embeddings
+index = pc.Index(index_name)
+docsearch = PineconeVectorStore(
+    index=index,
+    embedding=embeddings,
+    text_key="text"  # Match your index's text field name
 )
 retriever = docsearch.as_retriever(search_type="similarity", search_kwargs={"k": 3})
 
