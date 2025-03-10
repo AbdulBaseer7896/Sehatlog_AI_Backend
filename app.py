@@ -50,15 +50,20 @@ def index():
     return "its wokring"
 
 
-@app.route("/get", methods=["GET", "POST"])
+@app.route("/get", methods=["GET"])
 def chat():
-    msg = request.form["msg"]
-    input = msg
-    print(input)
-    # response = rag_chain.invoke({"input": msg})
-    print("Response : ", retriever)
-    
-    return retriever
+    msg = request.args.get("msg")  # Use 'args.get()' for GET request
+    if msg is None:
+        return jsonify({"error": "No message parameter provided"}), 400  # Return a 400 error if msg is not provided
+
+    print("Received message:", msg)
+
+    # Replace this with actual logic for response generation
+    # For example, you could process 'msg' here with a retriever or model
+    print("Response from retriever:", retriever)
+
+    return jsonify({"response": str(retriever)})  # Just for testing; replace with actual response
+
 
 
 
