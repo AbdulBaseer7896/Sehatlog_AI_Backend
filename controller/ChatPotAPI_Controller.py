@@ -19,6 +19,7 @@ def chatPot():
     elif request.method == 'POST':
         try:
             data = request.get_json()
+            print("This is the data  = " , data)
             user_input = data.get("question", "")
 
             if not user_input:
