@@ -12,6 +12,7 @@ from flask import request, jsonify
 
 @app.route('/chatbot/api', methods=["GET", "POST"])
 def chatPot():
+    print("its start working")
     if request.method == 'GET':
         return "ChatBot API is working"
 
