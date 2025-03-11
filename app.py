@@ -9,9 +9,11 @@ from dotenv import load_dotenv
 from utilits.prompt import *
 from utilits.Groq import GroqLLM
 import os
+from flask_cors import CORS  # <-- Add this missing import
 
 app = Flask(__name__)
 
+CORS(app, resources={r"/*": {"origins": "*"}})
 load_dotenv()
 
 PINECONE_API_KEY=os.environ.get('PINECONE_API_KEY')
@@ -59,3 +61,4 @@ from controller import *
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+
