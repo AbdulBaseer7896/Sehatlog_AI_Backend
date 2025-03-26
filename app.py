@@ -12,6 +12,8 @@ import os
 from flask_cors import CORS  # <-- Add this missing import
 
 app = Flask(__name__)
+UPLOAD_FOLDER = 'uploads'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 CORS(app, resources={r"/*": {"origins": "*"}})
 load_dotenv()
@@ -54,6 +56,8 @@ rag_chain = create_retrieval_chain(retriever, question_answer_chain)
 @app.route("/")
 def index():
     return "its wokring"
+
+
 
 
 from controller import *
