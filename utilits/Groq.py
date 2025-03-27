@@ -32,73 +32,103 @@ class GroqLLM(BaseLLM):
         return response.choices[0].message.content.strip()
 
 
-    def analyze_medical_report(self, ocr_text: str) -> Dict[str, Any]:
-        system_prompt = """You are a cardiac medical report analyzer. Your task is to:
-        1.content exists information in this JSON format:  and keep the is_heart_report : true
-        {
-            "is_heart_report": true,
-            "cardiac_data": {
-                "patient_info": { /* Any demographic info related to heart health */ },
-                "measurements": { /* All cardiovascular metrics found */ },
-                "findings": [ /* List of clinical observations */ ],
-                "diagnosis": [ /* Cardiac-related diagnoses */ ],
-                "recommendations": [ /* Heart-specific medical advice */ ]
-            }
-        }
-        Include any relevant details - preserve original values and units from the report. 
-        Return ONLY valid JSON, no commentary."""
+    # def analyze_medical_report(self, ocr_text: str) -> Dict[str, Any]:
+    #     system_prompt = """You are a cardiac medical report analyzer. Your task is to:
+    #     1.content exists information in this JSON format:  and keep the is_heart_report : true
+    #     {
+    #         "is_heart_report": true,
+    #         "cardiac_data": {
+    #             "patient_info": { /* Any demographic info related to heart health */ },
+    #             "measurements": { /* All cardiovascular metrics found */ },
+    #             "findings": [ /* List of clinical observations */ ],
+    #             "diagnosis": [ /* Cardiac-related diagnoses */ ],
+    #             "recommendations": [ /* Heart-specific medical advice */ ]
+    #         }
+    #     }
+    #     Include any relevant details - preserve original values and units from the report. 
+    #     Return ONLY valid JSON, no commentary."""
+    #     try:
+    #         # Get raw LLM response
+    #         response = self._call(
+    #             prompt=f"MEDICAL REPORT CONTENT:\n{ocr_text}",
+    #             system_prompt=system_prompt
+    #         )
+    #         # print("This is the repsone from llm = " , response)
+    #         # Improved JSON extraction
+    #         try:
+    #             # Find JSON boundaries
+    #             json_start = response.find('{')
+    #             json_end = response.rfind('}') + 1
+    #             if json_start == -1 or json_end == 0:
+    #                 raise ValueError("No JSON found in response")
+                
+    #             json_str = response[json_start:json_end]
+                
+    #             # Clean common formatting issues
+    #             json_str = json_str.replace('\\', '') \
+    #                             .replace('\n', ' ') \
+    #                             .replace('  ', ' ') \
+    #                             .replace("‘", "'") \
+    #                             .replace("’", "'")
+                
+    #             result = json.loads(json_str)
+                
+    #             # Validate structure
+    #             if not result.get('is_heart_report', False):
+    #                 print("its working")
+    #                 return {"is_heart_report": False}
+            
+    #             print("This is = to the result = " , result)
+                    
+    #             if not result.get('data'):
+    #                 raise ValueError("Missing data field in heart report")
+                    
+    #             return result
+                
+    #         except json.JSONDecodeError as e:
+    #             return {
+    #                 "error": f"JSON parsing failed: {str(e)}",
+    #                 "raw_response": response,
+    #                 "json_attempt": json_str
+    #             }
+    #         except Exception as e:
+    #             return {"error": f"Validation failed: {str(e)}"}
+                
+    #     except Exception as e:
+    #         return {"error": f"API request failed: {str(e)}"}
+    
+
+
+
+    def analyze_medical_report(self, ocr_text: str) -> Dict[str, bool]:
+        system_prompt = """Determine if this medical report contains cardiac-related information. 
+        Respond ONLY with JSON: {"is_heart_report": boolean}"""
+        
         try:
-            # Get raw LLM response
             response = self._call(
                 prompt=f"MEDICAL REPORT CONTENT:\n{ocr_text}",
                 system_prompt=system_prompt
             )
-            # print("This is the repsone from llm = " , response)
-            # Improved JSON extraction
+
+            # Simplified JSON extraction
+            json_str = response.replace("'", '"').strip()
+            if json_str.startswith("```json"):
+                json_str = json_str[7:-3].strip()
+                
             try:
-                # Find JSON boundaries
-                json_start = response.find('{')
-                json_end = response.rfind('}') + 1
-                if json_start == -1 or json_end == 0:
-                    raise ValueError("No JSON found in response")
-                
-                json_str = response[json_start:json_end]
-                
-                # Clean common formatting issues
-                json_str = json_str.replace('\\', '') \
-                                .replace('\n', ' ') \
-                                .replace('  ', ' ') \
-                                .replace("‘", "'") \
-                                .replace("’", "'")
-                
                 result = json.loads(json_str)
-                
-                # Validate structure
-                if not result.get('is_heart_report', False):
-                    print("its working")
+                return {"is_heart_report": result.get('is_heart_report', False)}
+            except json.JSONDecodeError:
+                # Fallback pattern matching
+                if '"is_heart_report": true' in json_str.lower():
+                    return {"is_heart_report": True}
+                if '"is_heart_report": false' in json_str.lower():
                     return {"is_heart_report": False}
-            
-                print("This is = to the result = " , result)
-                    
-                if not result.get('data'):
-                    raise ValueError("Missing data field in heart report")
-                    
-                return result
-                
-            except json.JSONDecodeError as e:
-                return {
-                    "error": f"JSON parsing failed: {str(e)}",
-                    "raw_response": response,
-                    "json_attempt": json_str
-                }
-            except Exception as e:
-                return {"error": f"Validation failed: {str(e)}"}
+                return {"is_heart_report": False}
                 
         except Exception as e:
-            return {"error": f"API request failed: {str(e)}"}
-    
-
-
+            # Fail-safe return
+            return {"is_heart_report": False}
 
     def extract_medical_data(self, system_prompt ,  ocr_text: str) -> Dict[str, Any]:
         try:
