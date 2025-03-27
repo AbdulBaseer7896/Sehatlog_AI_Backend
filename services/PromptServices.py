@@ -1,7 +1,7 @@
-system_prompt_heart_disease = """Extract EXACTLY these numerical values from the medical report:
+system_prompt_heart_disease = """Extract EXACTLY these numerical values:
 {
     "age": number,
-    "sex": number,
+    "sex": number (0 for male, 1 for female),
     "cp": number,
     "trestbps": number,
     "chol": number,

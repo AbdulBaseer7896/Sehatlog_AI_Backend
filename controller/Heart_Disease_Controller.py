@@ -40,41 +40,95 @@ def allowed_file(filename):
 
 
 
+
 @app.route('/api/analyze-image', methods=['POST'])
 def analyze_image():
-    print("This si the analyze Image function")
     if 'medical_image' not in request.files:
         return jsonify({"error": "No file uploaded"}), 400
-    print("test 1")
+    
     file = request.files['medical_image']
-    print("test 2")
     if file.filename == '' or not allowed_file(file.filename):
         return jsonify({"error": "Invalid file"}), 400
-    print("test 3")
 
     try:
-        print("test 4")
-
         # OCR Processing
         ocr_response = extrict_Data_From_image_using_OCR(file)
-        print("test 5")
+        
+        # First check if it's a heart report
+        groq_llm = GroqLLM(api_key=os.environ["GROQ_API_KEY"])
+        report_analysis = groq_llm.analyze_medical_report(ocr_response.pages[0].markdown)
+        
+        if not report_analysis.get('is_heart_report', False):
+            return jsonify({
+                "warning": "The document doesn't appear to be a heart disease report",
+                "show_form": True,
+                "form_data": feature_averages
+            }), 200
 
         # Data Extraction
-        groq_llm = GroqLLM(api_key=os.environ["GROQ_API_KEY"])
-        print("test 6")
-        extracted_data = groq_llm.extract_medical_data(  system_prompt_heart_disease , ocr_response.pages[0].markdown)
-        print("test 7")
+        extracted_data = groq_llm.extract_medical_data(system_prompt_heart_disease, ocr_response.pages[0].markdown)
+        
+        # Check if extraction failed
+        if 'error' in extracted_data:
+            return jsonify({
+                "error": "Could not extract data from image. Please enter manually.",
+                "show_form": True,
+                "form_data": feature_averages
+            }), 200
+
         # Merge with default values
         final_data = {**feature_averages, **extracted_data}
-        print("This ithe 8")
+        
         return jsonify({
             "success": True,
             "extracted_data": extracted_data,
             "default_values": feature_averages,
             "form_data": final_data
         })
+        
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({
+            "error": "Image processing failed. Please enter data manually.",
+            "show_form": True,
+            "form_data": feature_averages
+        }), 200
+
+
+# @app.route('/api/analyze-image', methods=['POST'])
+# def analyze_image():
+#     print("This si the analyze Image function")
+#     if 'medical_image' not in request.files:
+#         return jsonify({"error": "No file uploaded"}), 400
+#     print("test 1")
+#     file = request.files['medical_image']
+#     print("test 2")
+#     if file.filename == '' or not allowed_file(file.filename):
+#         return jsonify({"error": "Invalid file"}), 400
+#     print("test 3")
+
+#     try:
+#         print("test 4")
+
+#         # OCR Processing
+#         ocr_response = extrict_Data_From_image_using_OCR(file)
+#         print("test 5")
+
+#         # Data Extraction
+#         groq_llm = GroqLLM(api_key=os.environ["GROQ_API_KEY"])
+#         print("test 6")
+#         extracted_data = groq_llm.extract_medical_data(  system_prompt_heart_disease , ocr_response.pages[0].markdown)
+#         print("test 7")
+#         # Merge with default values
+#         final_data = {**feature_averages, **extracted_data}
+#         print("This ithe 8")
+#         return jsonify({
+#             "success": True,
+#             "extracted_data": extracted_data,
+#             "default_values": feature_averages,
+#             "form_data": final_data
+#         })
+#     except Exception as e:
+#         return jsonify({"error": str(e)}), 500
 
 @app.route('/predict/health_deases', methods=['POST'])
 def predict():
