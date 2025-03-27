@@ -7,7 +7,7 @@ import os
 
 
 def extrict_Data_From_image_using_OCR(file):
-        mistral_client = Mistral(api_key=os.environ["MISTRAL_API_KEY"])
+        mistral_client = Mistral(api_key=os.environ["HF_API_KEY"])
         base64_image = base64.b64encode(file.read()).decode('utf-8')
         
         ocr_response = mistral_client.ocr.process(
