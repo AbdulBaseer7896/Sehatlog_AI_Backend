@@ -7,6 +7,7 @@ import os
 from utilits.Groq import GroqLLM
 from services.OCR_Service import extrict_Data_From_image_using_OCR
 from services.PromptServices import system_prompt_heart_disease
+from services.PromptServices import system_prompt_for_Heart_Report
 
 
 model = joblib.load('./TrainModelFiles/heart_disease_model.pkl')
@@ -41,8 +42,8 @@ def allowed_file(filename):
 
 
 
-@app.route('/api/analyze-image', methods=['POST'])
-def analyze_image():
+@app.route('/api/analyze-image/heart', methods=['POST'])
+def heart_analyze_image():
     if 'medical_image' not in request.files:
         return jsonify({"error": "No file uploaded"}), 400
     
@@ -55,10 +56,19 @@ def analyze_image():
         ocr_response = extrict_Data_From_image_using_OCR(file)
         
         # First check if it's a heart report
-        groq_llm = GroqLLM(api_key=os.environ["GROQ_API_KEY"])
-        report_analysis = groq_llm.analyze_medical_report(ocr_response.pages[0].markdown)
-        print("This is the report analysis data = " , report_analysis)
+        # groq_llm = GroqLLM(api_key=os.environ["GROQ_API_KEY"])
+        # report_analysis = groq_llm.analyze_medical_report(system_prompt_for_Heart_Report , ocr_response.pages[0].markdown)
+        # print("This is the report analysis data = " , report_analysis)
         
+
+        groq_llm = GroqLLM(api_key=os.environ["GROQ_API_KEY"])
+        report_analysis = groq_llm.analyze_medical_report(
+            system_prompt_for_Heart_Report, 
+            ocr_response.pages[0].markdown
+            # report_key defaults to "is_heart_report"
+        )
+        print("Heart report analysis:", report_analysis)
+
         # if not report_analysis.get('is_heart_report', False):
         #     return jsonify({
         #         "warning": "The document doesn't appear to be a heart disease report",
@@ -99,7 +109,7 @@ def analyze_image():
 
 
 @app.route('/predict/health_deases', methods=['POST'])
-def predict():
+def heart_predict():
     print("THis is the predict funciton")
     data = request.json.get('form_data', {})
     
