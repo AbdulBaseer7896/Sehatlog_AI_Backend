@@ -12,4 +12,5 @@ Groq
 joblib
 flask_cors
 mistralai
+tensorflow
 gunicorn

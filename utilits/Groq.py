@@ -34,34 +34,6 @@ class GroqLLM(BaseLLM):
 
 
 
-    # def analyze_medical_report(self,  system_prompt , ocr_text: str) -> Dict[str, bool]:
-    #     try:
-    #         response = self._call(
-    #             prompt=f"MEDICAL REPORT CONTENT:\n{ocr_text}",
-    #             system_prompt=system_prompt
-    #         )
-
-    #         # Simplified JSON extraction
-    #         json_str = response.replace("'", '"').strip()
-    #         if json_str.startswith("```json"):
-    #             json_str = json_str[7:-3].strip()
-                
-    #         try:
-    #             result = json.loads(json_str)
-    #             return {"is_heart_report": result.get('is_heart_report', False)}
-    #         except json.JSONDecodeError:
-    #             # Fallback pattern matching
-    #             if '"is_heart_report": true' in json_str.lower():
-    #                 return {"is_heart_report": True}
-    #             if '"is_heart_report": false' in json_str.lower():
-    #                 return {"is_heart_report": False}
-    #             return {"is_heart_report": False}
-                
-    #     except Exception as e:
-    #         # Fail-safe return
-    #         return {"is_heart_report": False}
-
-
     def analyze_medical_report(
             self,
             system_prompt: str,
@@ -95,8 +67,11 @@ class GroqLLM(BaseLLM):
                 return {report_key: False}
             
             
+
+
     def extract_medical_data(self, system_prompt ,  ocr_text: str) -> Dict[str, Any]:
         try:
+            print("Tis is the orc text = = = " , ocr_text)
             response = self.client.chat.completions.create(
                 model=self.model_name,
                 messages=[
@@ -112,6 +87,43 @@ class GroqLLM(BaseLLM):
             
         except Exception as e:
             return {"error": str(e)}
+
+
+    def extract_medical_data_for_General_Report(self, system_prompt, ocr_text: str) -> Dict[str, Any]:
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": ocr_text}
+                ],
+                temperature=0.1
+            )
+
+            print("This is the response from the llm = " , response)
+            # Get the raw response content
+            response_content = response.choices[0].message.content
+        
+            
+            # Improved JSON extraction with error handling
+            json_match = re.search(r'```json(.*?)```', response_content, re.DOTALL)
+            if not json_match:
+                # Fallback to search for JSON without code blocks
+                json_match = re.search(r'\{.*\}', response_content, re.DOTALL)
+            
+            if not json_match:
+                return {"error": "No JSON data found in LLM response"}
+            
+            json_str = json_match.group(1) if json_match.group(1) else json_match.group(0)
+            
+            # Attempt to parse JSON
+            try:
+                return json.loads(json_str)
+            except json.JSONDecodeError as e:
+                return {"error": f"Invalid JSON format: {str(e)}"}
+                
+        except Exception as e:
+            return {"error": f"Extraction failed: {str(e)}"}
 
 
     def _generate(self, prompts: List[str], stop: Optional[List[str]] = None) -> LLMResult:
